@@ -1,0 +1,102 @@
+doctype html
+html 
+	head 
+		title Sideshift Payment Integration
+
+		meta( name="robots" content="noindex")
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		link(rel='stylesheet' href='main.css')
+
+	body 
+		if(coinsListDeposit)
+			div
+				h1 Sideshift Payment Integration - Node.js
+					br
+
+				form(method="post" action="/create-quote").custom-select.cool-input
+					p Virtual order ID :
+					input(type="string" pattern="[a-zA-Z0-9]+"  name="shopOrderID" value="cf5HE1Affb6")
+					br
+					br
+					
+					p Virtual order total (#{currency}) :
+					input(type="string" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="124.00")
+					br
+					br
+
+
+					h3 Pay with crypto
+				
+					- var networks = []
+					- coinsListDeposit.forEach(coin => {
+						- var network = coin[0].split('-')[1]
+						- if (!networks.includes(network)) {
+							- networks.push(network)
+						- }
+					- })
+
+					label Select Coin Network (#{networks.length})
+					br
+					select(name="network_filter")
+						option(value="all" selected) All Networks
+							- networks.forEach(network => {
+							option(value=network)= network
+						- })
+						
+					br
+					br
+					label#text Select Coin
+					br
+					select(name="pay_with")
+						each coin in coinsListDeposit
+							option(value=coin) #{coin[0]}
+							//- option(value=coin) #{coin[0].split('-')[0]}
+
+					br
+					br
+					button(type="submit").paybutton Pay
+		
+		
+		else 
+			h1 Error: Not coins list
+
+
+
+script.
+	document.addEventListener('DOMContentLoaded', function() {
+	const networkSelect = document.querySelector('select[name="network_filter"]');
+	const payWithSelect = document.querySelector('select[name="pay_with"]');
+
+	// Function to filter options based on selected network
+	function filterOptions() {
+		const selectedNetwork = networkSelect.value;
+
+		// Get all options from the pay_with select
+		const options = Array.from(payWithSelect.options);
+		let firstVisibleOption = null;
+		let counter = 0;
+
+		options.forEach(option => {
+			const optionValue = JSON.parse(option.value); 
+			const optionNetwork = optionValue[0].split('-')[1];
+			if (selectedNetwork === 'all' || optionNetwork === selectedNetwork) {
+				option.style.display = '';
+				if (firstVisibleOption === null) {
+				firstVisibleOption = option.value;
+				}
+				counter++;
+			} else {
+				option.style.display = 'none';
+			}
+		});
+		document.getElementById('text').innerText = "Select coin ("+counter+")";
+		// Update select value to first visible option if we have one
+		if (firstVisibleOption !== null) {
+		payWithSelect.value = firstVisibleOption;
+		}
+	}
+
+	networkSelect.addEventListener('change', filterOptions);
+
+	filterOptions();
+	});

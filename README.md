@@ -8,6 +8,27 @@ This Node.js package enables cryptocurrency payments in your shop by integrating
 - `PaymentPoller`: Polls the sideshift API for payment confirmation and triggers success/failure callbacks.
 
 
+## Installation 
+
+### Package
+The package only require fs and sideshift API module to works
+Use this file from the repo: [sideshift-api-nodejs](https://github.com/ryo-ohki-node/sideshift-api-nodejs/sideshiftAPI.js)
+```bash
+npm install fs
+```
+
+### Demo server
+Simple sample setting of how to use this Package on server and client side. 
+
+```bash
+npm install  https express pug fs
+// you need to set you cert.pem and key.pem for the https server before launching
+node demoshop.js
+```
+
+📝 Note: It will download and store the coin icon at first start.
+
+
 ## Configuration
 
 ### API Credentials
@@ -82,27 +103,6 @@ const secondary_wallet = {
 2. You cannot set the same coin-network twice
     - ❌ Invalid: USDT-ethereum and USDT-ethereum
     - ✅ Valid: USDT-ethereum and USDT-bsc
-
-
-## Installation 
-
-### Package
-The package only require fs and sideshift API module to works
-Use this file from the repo: [sideshift-api-nodejs](https://github.com/ryo-ohki-node/sideshift-api-nodejs/sideshiftAPI.js)
-```bash
-npm install fs
-```
-
-### Demo server
-Simple sample setting of how to use this Package on server and client side. 
-
-```bash
-npm install  https express pug fs
-// you need to set you cert.pem and key.pem for the https server before launching
-node demoshop.js
-```
-
-📝 Note: It will download and store the coin icon at first start.
 
 
 ## Usage

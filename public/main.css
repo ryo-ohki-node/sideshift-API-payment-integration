@@ -1,1 +1,415 @@
 
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  text-align: center;
+}
+
+h1, h2, h3, p {
+  margin: 10px 0;
+}
+
+a {
+  color: #007BFF;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Container */
+div {
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* Form and checkout */
+.form-checkout {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.form-checkout img {
+  display: block;
+  margin: 0 auto 15px;
+}
+
+.btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #218838;
+}
+
+/* Order table */
+table {
+  width: 70%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  background-color: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+th, td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #f1f1f1;
+  font-weight: bold;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* Status messages */
+#MESSAGE {
+    text-align: center;
+}
+#MESSAGE h2 {
+  color: #007BFF;
+  margin-top: 0;
+}
+
+#MESSAGE h2.expired {
+  font-weight: bold;
+  color: #dc3545;
+}
+
+#MESSAGE h2.validated {
+  font-weight: bold;
+  color: #2d990c;
+}
+
+#MESSAGE h3, #MESSAGE p {
+  margin: 5px 0;
+}
+
+/* Expiry timer */
+#EXPIREAT {
+  font-weight: bold;
+  color: #dc3545;
+}
+
+.paybutton {
+    position: relative;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 50px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+paybutton:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+}
+
+
+
+
+
+
+
+
+
+
+/* Cool Select Styles */
+.custom-select {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    margin: 10px;
+}
+
+.custom-select select {
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* .custom-select select:hover {
+    border-color: #5a67d8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+} */
+
+.custom-select select:focus {
+    border-color: #4a55b5;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+/* Custom dropdown arrow */
+/* .custom-select::after {
+    content: "▼";
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    color: white;
+    font-size: 12px;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+} */
+
+.custom-select:hover::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* Option styles */
+.custom-select option {
+    background: #fff;
+    color: #333;
+    font-weight: normal;
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.custom-select option:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.custom-select option:checked {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Dark mode variation */
+.dark-mode .custom-select select {
+    background: linear-gradient(135deg, #2d3748 0%, #4a55b5 100%);
+    border-color: #4a55b5;
+}
+
+.dark-mode .custom-select option {
+    background: #2d3748;
+    color: #e2e8f0;
+}
+
+
+
+
+
+
+
+
+/* Cool Input Text Styles */
+.cool-input {
+    position: relative;
+    display: inline-block;
+    margin: 10px;
+    width: 250px;
+}
+
+.cool-input input {
+    padding: 12px 16px;
+    font-size: 16px;
+    color: #333;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    letter-spacing: 0.5px;
+}
+
+/* .cool-input input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+    transform: translateY(-2px);
+} */
+
+.cool-input input:hover {
+    border-color: #5a67d8;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Animated placeholder */
+.cool-input input::placeholder {
+    color: #999;
+    font-weight: 400;
+    transition: all 0.3s ease;
+}
+
+/* .cool-input input:focus::placeholder {
+    color: #667eea;
+    transform: translateX(5px);
+} */
+
+/* Input with icon */
+.cool-input.icon input {
+    padding-left: 40px;
+}
+
+.cool-input.icon::before {
+    content: "✎";
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667eea;
+    font-size: 16px;
+    pointer-events: none;
+}
+
+/* Input with underline effect */
+.cool-input.underline input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #e0e0e0;
+    border-radius: 0;
+    padding: 12px 0;
+    box-shadow: none;
+}
+
+.cool-input.underline input:focus {
+    border-color: #667eea;
+    box-shadow: none;
+}
+
+/* Input with glow effect */
+.cool-input.glow input {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cool-input.glow input:focus {
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+}
+
+/* Input with floating label */
+.cool-input.floating {
+    width: 100%;
+    max-width: 300px;
+}
+
+.cool-input.floating input {
+    padding: 15px 16px 8px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #e0e0e0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.cool-input.floating label {
+    position: absolute;
+    left: 16px;
+    top: 15px;
+    color: #999;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    font-size: 16px;
+}
+
+.cool-input.floating input:focus + label,
+.cool-input.floating input:not(:placeholder-shown) + label {
+    top: -10px;
+    left: 0;
+    font-size: 12px;
+    color: #667eea;
+    transform: scale(0.8);
+}
+
+/* Different input styles */
+.cool-input.primary input {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #5a67d8;
+    color: white;
+}
+
+.cool-input.primary input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.cool-input.secondary input {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-color: #f5576c;
+    color: white;
+}
+
+.cool-input.success input {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-color: #00f2fe;
+    color: white;
+}
+
+/* Input with animation on focus */
+.cool-input.animate input {
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.cool-input.animate input:focus {
+    transform: scale(1.02);
+}
+
+
+
+
+
+
+
+
+
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  div {
+    padding: 10px;
+  }
+
+  .form-checkout {
+    padding: 15px;
+  }
+
+  th, td {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+}

@@ -147,7 +147,7 @@ async function checkOrderStatus(shiftID, invoiceID, destWallet, amount) {
 // Website routes
 app.get("/selection", rateLimiter, function(req,res){
 	const coinsList = availableCoins ? availableCoins.sort() : null;
-	res.render('select-payment', { coinsListDeposit: coinsList, currency: SHOP_SETTING.currency });
+	res.render('select-payment-method', { coinsListDeposit: coinsList, currency: SHOP_SETTING.currency });
 });
 
 app.post("/create-quote", paymentLimiter, async function(req,res){

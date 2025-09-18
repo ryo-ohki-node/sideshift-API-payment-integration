@@ -1,0 +1,194 @@
+doctype html
+html 
+	head 
+		if(ratio)
+			title Preview payment
+		else if(shift)
+			title Shift payment
+		else
+			title Error
+
+		meta( name="robots" content="noindex")
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		if(shift)
+			link(rel='stylesheet' href='../../main.css')
+		else 
+			link(rel='stylesheet' href='main.css')
+
+	body 
+		div 
+			//- Preview payment page
+			if(ratio)
+				h1 Order ID: #{invoice.id}
+				if(!invoice)
+					p Error - No invoice Data
+
+				if(ratio.error)
+					p API error
+					if(ratio.error.message)
+						p=ratio.error.message
+				else
+					-totalCrypto = (invoice.total_crypto / Number(ratio.rate)).toFixed(8)
+					-invoiceTotal = Number(invoice.total).toLocaleString(SHOP_SETTING.locale,{style:'currency', currency: SHOP_SETTING.currency})
+
+					form(method="post" action="/create-payment").form-checkout
+						h1 Pay #{invoiceTotal} with
+						img(src="/icons/"+ratio.depositCoin+"-"+ratio.depositNetwork+".svg" width="100px" height="100px")
+						h2 #{ratio.depositCoin} (#{ratio.depositNetwork})
+						
+						if(invoice.isMemo === "true")
+							p 
+								b This coin need a Memo.
+									br
+									| Don't forget to set the destination wallet Memo when sending or your coins can be lost.
+									br
+
+						p Prepare to send nearby 
+							b #{totalCrypto} #{ratio.depositCoin} (#{ratio.depositNetwork}).
+						
+						p Exact amout will be calculated next step.
+						p You will have 
+							b 15 minutes 
+							| to send the coins, set everything before going to the next step.
+						
+
+						div.styleform
+							input(type="hidden" name="coin" value=ratio.depositCoin )
+							input(type="hidden" name="network" value=ratio.depositNetwork )
+							input(type="hidden" name="total" value=invoice.total)
+							input(type="hidden" name="id" value=invoice.id)
+
+							button(type="submit").paybutton Go to Pay page
+							br
+							br
+							if(ratio.depositCoin.toUpperCase().includes('USD'))
+								h3 Why do I need to pay more than #{invoiceTotal}?
+								p The total amount includes both your invoice and blockchain network fees. You're sending nearby #{totalCrypto} #{ratio.depositCoin} to ensure everything processes correctly.
+									br
+									br
+
+
+
+			//- Shift payment page
+			if(shift)
+				if(!invoice)
+					p Invoice error
+
+				if(shift.error)
+					h3 API error
+					p #{shift.error.message}
+				else
+					h1 Order #{invoice.id} payment status
+
+					table
+						tr
+							th Payment ID
+							td
+								p #{shift.id}
+						//- tr
+						//- 	th Quote ID
+						//- 	td
+						//- 		p=shift.quoteId
+						tr
+							th Deposit coin
+							td
+								p
+									b #{shift.depositCoin} (#{shift.depositNetwork})
+						tr
+							th Creation Date
+							td
+								p #{(new Date(shift.createdAt)).toLocaleString(SHOP_SETTING.locale)}
+						tr
+							th Expiration Date
+							td
+								p#EXPIREAT #{(new Date(shift.expiresAt)).toLocaleString(SHOP_SETTING.locale)}
+						tr
+							th STATUS
+							td
+								p
+									b #{shift.status}
+
+					br
+					br
+
+					if(shift.status != "expired")
+						img(src="/icons/"+shift.depositCoin+"-"+shift.depositNetwork+".svg" width="100px" height="100px")
+						h2 #{shift.depositCoin} (#{shift.depositNetwork})
+
+
+					div#MESSAGE
+						if(shift.status == "waiting")
+							h2 Waiting for payment.
+						else if(shift.status == "pending")
+							h2 Payment detected, waiting confirmation.
+						else if(shift.status == "processing")
+							h2 Deposit confirmed.
+						else if(shift.status == "settling")
+							h2 Payment near 100% completed.
+						
+						else if(shift.status == "settled")
+							h2.validated Payment completed !
+							//- REDIRECT TO SUCCESS PAGE
+							script.
+								const shiftData = !{JSON.stringify(shift)};
+								setTimeout(function() {
+									window.location.href = "/success/"+shiftData.id+"/#{invoice.id}";
+								}, 2000);
+						
+						else if(shift.status == "expired")
+							h2.expired Payment address expired !
+							//- REDIRECT TO CANCEL PAGE
+							script.
+								const shiftData = !{JSON.stringify(shift)};
+								setTimeout(function() {
+									window.location.href = "/cancel/"+shiftData.id+"/#{invoice.id}";
+								}, 2000);
+						
+						else
+							h2 Invalid status
+							
+						if(shift.status != "expired")
+							table
+								tr
+									if(shift.status == "waiting")
+										th Send
+									else
+										th Amount
+									td #{shift.depositAmount}
+								tr
+									if(shift.status == "waiting")
+										th To
+									else
+										th Destination Wallet
+									td #{shift.depositAddress}
+								if(shift.depositMemo)
+									tr
+										th Wallet Memo
+										td #{shift.depositMemo}
+
+
+					br
+					br
+
+
+
+if(shift)
+	script.
+		const shiftData = !{JSON.stringify(shift)};
+		let now = Date.now();
+		let expireAt = new Date(shiftData.expiresAt).valueOf();
+		let Timer = ( ( (Number(expireAt) - Number(now)) /1000 ) /60 ).toFixed(0);
+
+		document.getElementById("EXPIREAT").innerText = Timer +" min";
+		if(Timer < 0){
+			document.getElementById("EXPIREAT").innerText = "Expired";
+		} else{
+			document.getElementById("EXPIREAT").innerText = Timer +" min";
+		}
+
+		function autoRefresh() {
+			const status = shiftData.status;
+			if(status !== "expired" && status !== "settled") location.reload();
+		}
+		
+		setTimeout(autoRefresh, 30000);

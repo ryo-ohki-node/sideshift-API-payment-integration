@@ -1,6 +1,6 @@
 class PaymentPoller {
-    constructor({ shiftGateway, intervalTimeout = 120000, resetCryptoPayment, confirmCryptoPayment }) {
-        if (!shiftGateway) throw new Error('Missing parameter "shiftGateway". PaymentPoller need sideshift API access to run')
+    constructor({ shiftProcessor, intervalTimeout = 30000, resetCryptoPayment, confirmCryptoPayment }) {
+        if (!shiftProcessor) throw new Error('Missing parameter "shiftProcessor". PaymentPoller need sideshift API access to run')
         this.shiftMapping = new Map();
 
         // Set initial Polling control
@@ -14,10 +14,10 @@ class PaymentPoller {
         this.delay = Number(intervalTimeout);
 
         // setting sideshift API 
-        this.shiftGateway = shiftGateway;
+        this.shiftProcessor = shiftProcessor;
 
         // Use sideshift Verbose setting
-        this.verbose = shiftGateway.verbose;
+        this.verbose = shiftProcessor.verbose;
 
         this.maxRetries = 3;
 
@@ -27,25 +27,26 @@ class PaymentPoller {
     }
 
     // Add payment to tracking
-    addPayment(shiftId, orderId, destWallet, amount) {
-        if (!shiftId || !orderId || !destWallet || !amount) {
+    addPayment(shift, orderId, destWallet, amount) {
+        if (!shift.id || !orderId || !destWallet || !amount) {
             throw new Error('Invalid parameters passed to addPayment');
         }
-        if (this.verbose) console.log(`Adding payment ${shiftId} to polling`);
+        if (this.verbose) console.log(`Adding payment ${shift.id} to polling`);
 
         // Store in your existing mapping structure
-        this.shiftMapping.set(shiftId, {
+        this.shiftMapping.set(shift.id, {
             status: 'waiting',
             orderId: orderId,
             amount: amount,
             wallet: destWallet,
+            shift: shift,
             timestamp: new Date(),
             lastChecked: null,
             retries: 0
         });
 
         // Add to polling queue
-        this.pollingQueue.add(shiftId);
+        this.pollingQueue.add(shift.id);
 
         // Start polling if not already running
         if (!this.isPolling) {
@@ -68,6 +69,7 @@ class PaymentPoller {
         this.pollOnce();
     }
 
+    
     // Single polling execution - event-driven
     async pollOnce() {
         if (this.pollingQueue.size === 0) {
@@ -83,15 +85,39 @@ class PaymentPoller {
             return data && !['settled', 'expired'].includes(data.status);
         });
 
-        for (const shiftId of activeShifts) {
-            try {
-                // Get current status from API
-                const data = await this.shiftGateway.sideshift.getShift(shiftId);
+        if (activeShifts.length === 0) {
+            if (this.verbose) console.log('No active payments to poll, stopping polling');
+            this.stopPolling();
+            return;
+        }
+
+        try {
+            let bulkData;
+
+            // Use single call for one shift, bulk for multiple shifts
+            if (activeShifts.length === 1) {
+                const shiftId = activeShifts[0];
+                const data = await this.shiftProcessor.sideshift.getShift(shiftId);
+                bulkData = [ data ]; // Wrap in array for consistent processing
+            } else {
+                bulkData = await this.shiftProcessor.sideshift.getBulkShifts(activeShifts);
+            }
+
+            // Map shiftId -> data for easier access
+            const shiftMap = new Map(bulkData.map(shift => [shift.id, shift]));
+
+            for (const shiftId of activeShifts) {
+                const data = shiftMap.get(shiftId);
+               
+                if (!data) {
+                    if (this.verbose) console.warn(`No data returned for shift ${shiftId}`);
+                    continue;
+                }
+
                 const newStatus = data.status;
 
                 if (this.verbose) console.log(`Payment ${shiftId} status: ${newStatus}`);
 
-                // Update your mapping with new status
                 if (this.shiftMapping.has(shiftId)) {
                     const paymentData = this.shiftMapping.get(shiftId);
 
@@ -100,30 +126,31 @@ class PaymentPoller {
                         if (this.verbose) console.log(`Status changed for ${shiftId}: ${paymentData.status} -> ${newStatus}`);
 
                         // Update local mapping
+                        paymentData.shift = data;
                         paymentData.status = newStatus;
                         paymentData.lastChecked = new Date();
 
                         // Process completed payments
                         if (newStatus === 'settled') {
-                            await this.handleCompletedPayment(data, paymentData, shiftId);
+                            await this.handleCompletedPayment(data, paymentData);
                             this.pollingQueue.delete(shiftId); // Remove from polling
                             if (this.verbose) console.log(`Removed ${shiftId} from polling queue`);
                         } else if (newStatus === 'expired') {
-                            await this.handleFailedPayment(data, paymentData, shiftId);
+                            await this.handleFailedPayment(data, paymentData);
                             this.pollingQueue.delete(shiftId); // Remove from polling
                             if (this.verbose) console.log(`Removed failed ${shiftId} from polling queue`);
                         }
                     }
-
                 } else {
-                    // If shiftId not in mapping
                     if (this.verbose) console.log(`Unknown ${shiftId} inside polling queue`);
                 }
+            }
 
-            } catch (error) {
-                if (this.verbose) console.error(`Error checking ${shiftId}:`, error);
+        } catch (error) {
+            if (this.verbose) console.error('Error during polling:', error);
 
-                // Increment retry count
+            // Retry logic per shift
+            for (const shiftId of activeShifts) {
                 if (!this.shiftMapping.has(shiftId)) {
                     this.shiftMapping.set(shiftId, { status: 'unknown', lastChecked: new Date(), retries: 0 });
                 }
@@ -133,25 +160,44 @@ class PaymentPoller {
 
                 if (this.verbose) console.log(`Retry count for ${shiftId}: ${paymentData.retries}`);
 
-                // Stop retrying after max retries
                 if (paymentData.retries >= this.maxRetries) {
-                    if (this.verbose) console.warn(`Max retries (${this.maxRetries}) reached for ${shiftId}, removing from queue`);
+                    if (this.verbose)
+                        console.warn(`Max retries (${this.maxRetries}) reached for ${shiftId}, removing from queue`);
                     this.pollingQueue.delete(shiftId);
                     await this.handleRetryExceeded(shiftId, error);
                 }
             }
         }
 
-        // Schedule the next polling cycle only if there are still payments to check
+        // Schedule next polling cycle only if there are still payments to check
         if (this.pollingQueue.size > 0) {
             this.pollTimer = setTimeout(() => {
                 this.pollOnce();
             }, this.delay);
         } else {
             if (this.verbose) console.log('All payments processed, stopping polling');
-            // this.isPolling = false;
             this.stopPolling();
         }
+    }
+
+    // Get polling data
+    getPollingShiftData(shiftId) {
+        // Check if shift exists in mapping
+        if (!this.shiftMapping.has(shiftId)) {
+            return null;
+        }
+
+        const data = this.shiftMapping.get(shiftId);
+
+        // Validate that the shift is still in the polling queue
+        const isInQueue = this.pollingQueue.has(shiftId);
+
+        if (!isInQueue) {
+            return null;
+        }
+
+        // Return a shallow copy of the data
+        return { ...data };
     }
 
 
@@ -175,10 +221,10 @@ class PaymentPoller {
     // Stop specific shift polling with individual timer cleanup
     async stopPollingForShift(shiftId, reason = 'manual') {
         if (this.verbose) console.log(`Stopping polling for shift ${shiftId} - ${reason}`);
-        
+
         // Remove from polling queue
         this.pollingQueue.delete(shiftId);
-        
+
         // Optionally update status in shiftMapping
         const paymentData = this.shiftMapping.get(shiftId);
         if (paymentData) {
@@ -189,7 +235,7 @@ class PaymentPoller {
                 stoppedAt: new Date()
             });
         }
-        
+
         // If no more active shifts, stop main timer
         if (this.pollingQueue.size === 0 && this.pollTimer) {
             this.stopPolling();
@@ -218,12 +264,13 @@ class PaymentPoller {
 
 
     // Handle completed payments
-    async handleCompletedPayment(shiftData, paymentData, shiftId) {
+    async handleCompletedPayment(shift, paymentData) {
         try {
+            const shiftId = shift.id;
             // Your processing logic here
             if (this.verbose) console.log(`Processing completed payment ${shiftId}`);
             const orderId = paymentData.orderId;
-            if (paymentData.amount === shiftData.settleAmount && paymentData.wallet === shiftData.settleAddress) {
+            if (paymentData.amount === shift.settleAmount && paymentData.wallet === shift.settleAddress) {
                 await this.updateOrderStatus(orderId, 'completed', shiftId);
                 if (this.verbose) console.log(`Successfully processed completed payment ${shiftId}`);
             } else {
@@ -236,8 +283,9 @@ class PaymentPoller {
     }
 
     // Handle failed payments
-    async handleFailedPayment(shiftData, paymentData, shiftId) {
+    async handleFailedPayment(shift, paymentData) {
         try {
+            const shiftId = shift.id;
             // Your processing logic here
             if (this.verbose) console.log(`Processing failed payment ${shiftId}`);
             const orderId = paymentData.orderId;

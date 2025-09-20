@@ -1,6 +1,6 @@
 # sideshift-API-payment-integration package
 
-This Node.js package enables cryptocurrency payments in your shop by integrating with the [Sideshift API](https://sideshift.ai/). This integration uses the [sideshift-api-nodejs](https://github.com/ryo-ohki-node/sideshift-api-nodejs) module. It supports real-time payment processing, polling for transaction confirmations, 237+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
+This Node.js package enables cryptocurrency payments in your Node.js project by integrating with the [Sideshift API](https://sideshift.ai/) using the [sideshift-api-nodejs](https://github.com/ryo-ohki-node/sideshift-api-nodejs) module, allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. It supports real-time payment processing, polling for transaction confirmations, 237+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
 
 ## Components
@@ -11,14 +11,14 @@ This Node.js package enables cryptocurrency payments in your shop by integrating
 ## Installation 
 
 ### Package
-The package only require fs and sideshift API module to works
+The package only requires the fs and sideshift API modules to work.
 Use this file from the repo: [sideshift-api-nodejs](https://github.com/ryo-ohki-node/sideshift-api-nodejs/sideshiftAPI.js)
 ```bash
 npm install fs
 ```
 
 ### Demo server
-Simple sample setting of how to use this Package on server and client side. 
+Simple sample settings of how to use this package on server and client sides.
 
 ```bash
 npm install  https express pug fs
@@ -26,7 +26,7 @@ npm install  https express pug fs
 node demoshop.js
 ```
 
-📝 Note: It will download and store the coin icon at first start.
+📝 Note: It will download and store the coin icon on the first start.
 
 
 ## Configuration
@@ -45,7 +45,7 @@ const SIDESHIFT_CONFIG = {
 
 ### Payment Settings
 ```
-SHOP_SETTING.locale = "en-EN"; // Used for the currencie symbole
+SHOP_SETTING.locale = "en-EN"; // Used for the currencie symbol
 SHOP_SETTING.currency = "USD"; // Supported currencies: USD, EUR, JPY... (ISO 4217 code standard)
 SHOP_SETTING.USD_REFERENCE_COIN = "USDT-bsc"; // Must be a coin-network from the coinList
 ```
@@ -74,7 +74,6 @@ const cryptoPoller = new PaymentPoller({
 ```
 
 
-
 ## Wallet Configuration
 Important: The current version requires two different wallets since the Sideshift API doesn't support same-coin shifts (e.g., BTC to BTC).
 
@@ -93,7 +92,7 @@ const main_wallet = {
 const secondary_wallet = {
     coin: "BNB",
     network: "bsc",
-    address: "Your_Wallet_Address",
+    address: main_wallet.address,
     isWalletMemo: [false, ""]
 }
 ```
@@ -115,18 +114,28 @@ const outputChoise = shiftGateway.getDestinationWallet(inputCoin);
 ```
 
 ### Convert FIAT amount to crypto
+Parameters 
+- amount FIAT currency (e.g., 100.54)
+- from (e.g., BTC-bitcoin)
+- to (e.g., ETH-ethereum)
 ```
-let amount = await shiftGateway.getAmountToShift(total, outputCoin-outputNetwork, inputCoin[0]);
+let amount = await shiftGateway.getAmountToShift(amount, from, to);
 ```
 
 ### Get shift pair information
+Parameters 
+- from (e.g., BTC-bitcoin)
+- to (e.g., ETH-ethereum)
 ```
-const getPairData = await shiftGateway.sideshift.getPair(payWithCoin, outputChoise.coin+"-"+outputChoise.network);
+const getPairData = await shiftGateway.sideshift.getPair(from, to);
 ```
 
 ### Create invoice shift 
+Parameters 
+- coin (e.g., BTC)
+- network (e.g., bitcoin)
+- total (e.g., 412.25)
+- userIp (e.g., 123.123.123.123)
 ```
-const shift = await shiftGateway.createFixedShift(coin, network, totalAmountFIAT, userIP);
+const shift = await shiftGateway.createFixedShift(coin, network, total, userIp);
 ```
-
-

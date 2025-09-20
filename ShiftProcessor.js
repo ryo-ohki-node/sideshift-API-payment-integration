@@ -1,5 +1,3 @@
-const fs = require('fs');
-
 class ShiftProcessor {
     constructor({ WALLETS, MAIN_COIN, SECONDARY_COIN, SIDESHIFT_CONFIG, SHOP_SETTING }) {
         // Initialize Sideshift API
@@ -145,7 +143,6 @@ class ShiftProcessor {
         }
     }
 
-
     _getAlternativeUSDCoin(inputCoin) {
         const network = inputCoin.split('-')[1];
         // Find coins with the same network
@@ -202,8 +199,10 @@ class ShiftProcessor {
         }
     }
 
+
+
     // Convert FIAT amount into cryptocurrency amout
-    async getAmountToShift(amountToShift, settleCoin, depositCoin) {
+    async getAmountToShift(amountToShift, depositCoin, settleCoin) {
         if (!amountToShift || isNaN(amountToShift)) {
             throw new Error('Invalid amount to shift');
         }
@@ -238,7 +237,7 @@ class ShiftProcessor {
     }
 
     // Call Sideshift module to get quote and create a fixed rate shift
-    async createFixedShift(coin_A, network_A, amount_FIAT, userIP = null) {
+    async createFixedShift(coin_A, network_A, amount_FIAT, userIp = null) {
         try {
             if (!coin_A || !network_A || !amount_FIAT) {
                 throw new Error('Missing required parameters for createFixedShift');
@@ -249,7 +248,7 @@ class ShiftProcessor {
 
             let amountCrypto;
             try {
-                amountCrypto = await this.getAmountToShift(amount_FIAT, output.coin + "-" + output.network, coin_A);
+                amountCrypto = await this.getAmountToShift(amount_FIAT, coin_A, output.coin + "-" + output.network);
             } catch (error) {
                 throw new Error(`Failed to calculate amount: ${error.message}`);
             }
@@ -261,7 +260,7 @@ class ShiftProcessor {
                 settleNetwork: output.network,
                 depositAmount: null,
                 settleAmount: Number(amountCrypto),
-                ...(userIP && { "userIP": userIP })
+                ...(userIp && { "userIp": userIp })
 
             });
 
@@ -275,7 +274,7 @@ class ShiftProcessor {
                     ...(output.isMemo[0] && { "settleMemo": String(output.isMemo[1]) }),
                     // ...(refundAddress && { refundAddress }),
                     // ...(refundMemo && { refundMemo }),
-                    ...(userIP && { "userIP": userIP })
+                    ...(userIp && { "userIp": userIp })
                 });
             }
 
@@ -290,7 +289,9 @@ class ShiftProcessor {
         }
     }
 
-    
+
+
+
     // return array of available USD coins
     _filterUsdCoinsAndNetworks(availableCoins) {
         const usdCoins = availableCoins.filter(coinNetwork =>
@@ -388,7 +389,7 @@ class ShiftProcessor {
                     const buffer = Buffer.from(await blob.arrayBuffer());
                     fs.writeFileSync(filePath, buffer);
 
-                    if (verbose) console.log(`✓ Saved: ${coinNetwork}.svg`);
+                    if (this.verbose) console.log(`✓ Saved: ${coinNetwork}.svg`);
                     count++;
                 } catch (error) {
                     console.error(`✗ Failed to download ${coinNetwork}:`, error.message);
@@ -407,4 +408,5 @@ class ShiftProcessor {
 }
 
 
-module.exports = ShiftProcesso
+
+module.exports = ShiftProcessor;

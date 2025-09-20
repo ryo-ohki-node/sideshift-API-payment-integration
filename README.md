@@ -134,8 +134,8 @@ const getPairData = await shiftGateway.sideshift.getPair(from, to);
 Parameters 
 - coin (e.g., BTC)
 - network (e.g., bitcoin)
-- total (e.g., 412.25)
+- amount cryptocurrency (e.g., 0.05)
 - userIp (e.g., 123.123.123.123)
 ```
-const shift = await shiftGateway.createFixedShift(coin, network, total, userIp);
+const shift = await shiftGateway.createFixedShift(coin, network, amount, userIp);
 ```

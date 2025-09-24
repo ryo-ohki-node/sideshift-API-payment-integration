@@ -1,8 +1,10 @@
+const fs = require('fs');
+
 class ShiftProcessor {
     constructor({ WALLETS, MAIN_COIN, SECONDARY_COIN, SIDESHIFT_CONFIG, SHOP_SETTING }) {
         // Initialize Sideshift API
         try {
-            const SideshiftAPI = require('../Sideshift_API_module/sideshift_module.js');
+            const SideshiftAPI = require(SIDESHIFT_CONFIG.path);
             this.sideshift = new SideshiftAPI({
                 secret: SIDESHIFT_CONFIG.secret,
                 id: SIDESHIFT_CONFIG.id,
@@ -35,8 +37,6 @@ class ShiftProcessor {
         // Base URL for USD exhange rate
         this.EXCHANGE_RATE_API_URL = "https://api.exchangerate-api.com/v4/latest/" + this.SHOP_SETTING.currency;
     }
-
-
 
     // IP address validation
     _isValidIPv4(ip) {
@@ -143,6 +143,7 @@ class ShiftProcessor {
         }
     }
 
+    // Used for ratio estimation - Select alternative network for same coin if both deposit and settle are equal
     _getAlternativeUSDCoin(inputCoin) {
         const network = inputCoin.split('-')[1];
         // Find coins with the same network
@@ -166,10 +167,12 @@ class ShiftProcessor {
         return preferredCoin[0] || null;
     }
 
+    // Test is coin is USD stable coin
     _isUsdBased(coin) {
         return coin && String(coin).toUpperCase().includes('USD');
     }
 
+    // Get exchange ratio betwwen 2 coins
     async _getRatio(referenceCoin, depositCoin, settleCoin) {
         if (!referenceCoin || !depositCoin || !settleCoin) {
             throw new Error('Missing required parameters for _getRatio');
@@ -199,9 +202,7 @@ class ShiftProcessor {
         }
     }
 
-
-
-    // Convert FIAT amount into cryptocurrency amout
+    // Convert FIAT amount into Cryptocurrency amout
     async getAmountToShift(amountToShift, depositCoin, settleCoin) {
         if (!amountToShift || isNaN(amountToShift)) {
             throw new Error('Invalid amount to shift');
@@ -288,8 +289,6 @@ class ShiftProcessor {
             throw error;
         }
     }
-
-
 
 
     // return array of available USD coins
@@ -406,7 +405,6 @@ class ShiftProcessor {
         }
     }
 }
-
 
 
 module.exports = ShiftProcessor;

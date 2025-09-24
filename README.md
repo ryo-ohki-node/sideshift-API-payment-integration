@@ -50,6 +50,40 @@ SHOP_SETTING.currency = "USD"; // Supported currencies: USD, EUR, JPY... (ISO 42
 SHOP_SETTING.USD_REFERENCE_COIN = "USDT-bsc"; // Must be a coin-network from the coinList
 ```
 
+### Wallet Configuration
+Important: The current version requires two different wallets since the Sideshift API doesn't support same-coin-network shifts (e.g., BTC-bitcoin to BTC-bitcoin).
+
+```
+const MAIN_WALLET = {
+	coin: "USDT",
+	network: "bsc",
+	address: "Your wallet address",
+	isMemo: [false, ""] // Set to [false, ""] or if your wallet need a Memo set to [true, "YourMemoHere"]
+}
+
+const SECONDARY_WALLET = {
+	coin: "BNB",
+	network: "bsc",
+	address: "Your wallet address",
+	isMemo: [false, ""]
+}
+
+const MAIN_COIN = `${MAIN_WALLET.coin}-${MAIN_WALLET.network}`;
+const SECONDARY_COIN = `${SECONDARY_WALLET.coin}-${SECONDARY_WALLET.network}`;
+
+const WALLETS = {
+    [MAIN_COIN]: MAIN_WALLET,
+    [SECONDARY_COIN]: SECONDARY_WALLET
+};
+```
+
+⚠️ Important Notes
+1. Wallets can be set on different networks (we only use 'bsc' for simplicity in this example, with 2 different coins, this is the easiest setting)
+2. You cannot set the same coin-network twice
+    - ❌ Invalid: USDT-ethereum and USDT-ethereum
+    - ✅ Valid: USDT-ethereum and USDT-bsc
+
+
 ### Load the crypto payment processor
 ```
 const cryptoProcessor = require('./ShiftProcessor.js')
@@ -72,36 +106,6 @@ const cryptoPoller = new PaymentPoller({
   confirmCryptoPayment
 });
 ```
-
-
-## Wallet Configuration
-Important: The current version requires two different wallets since the Sideshift API doesn't support same-coin shifts (e.g., BTC to BTC).
-
-### Main Wallet
-```
-const main_wallet = {
-    coin: "USDT",
-    network: "bsc",
-    address: "Your_Wallet_Address",
-    isWalletMemo: [false, ""] // Set to [true, "YourMemoHere"] if wallet requires memo
-}
-```
-
-### Secondary Wallet
-```
-const secondary_wallet = {
-    coin: "BNB",
-    network: "bsc",
-    address: main_wallet.address,
-    isWalletMemo: [false, ""]
-}
-```
-
-⚠️ Important Notes
-1. Wallets can be set on different networks (we only use 'bsc' for simplicity in this example, with 2 different coins, this is the easiest setting)
-2. You cannot set the same coin-network twice
-    - ❌ Invalid: USDT-ethereum and USDT-ethereum
-    - ✅ Valid: USDT-ethereum and USDT-bsc
 
 
 ## Usage
@@ -137,5 +141,5 @@ Parameters
 - amount cryptocurrency (e.g., 0.05)
 - userIp (e.g., 123.123.123.123)
 ```
-const shift = await shiftGateway.createFixedShift(coin, network, amount, userIp);
+const shift = await shiftGateway.createFixedShift(depositCoin, depositNetwork, amount, userIp);
 ```

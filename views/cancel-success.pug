@@ -1,0 +1,40 @@
+doctype html
+html 
+	head 
+		if(success)
+			title Payment confirmed
+		if(cancel)
+			title Payment canceled
+				
+		meta( name="robots" content="noindex")
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		link(rel='stylesheet' href='/main.css')
+
+	body 
+
+		if(cancel)
+			if(cancel.shift && cancel.order)
+				h1 Payment canceled
+				
+				h2 Your order #{cancel.order.id} is still waiting payment.
+
+				h3 Payment #{cancel.shift.id} is canceled.
+				p #{cancel.order.cryptoPaymentStatus}
+				p #{cancel.shift.depositAmount} #{cancel.shift.depositCoin} #{cancel.shift.depositNetwork} for #{cancel.order.total} #{SHOP_SETTING.currency}
+
+				p 
+					a(href="/") Go to payment page
+			else 
+				h1 Error
+
+		if(success)
+			if(success.shift && success.order)
+				h1 Payment succeed
+
+				p Payment #{success.shift.id} is confirmed.
+				p You payed #{success.shift.depositAmount} #{success.shift.depositCoin} #{success.shift.depositNetwork} for #{success.order.total} #{SHOP_SETTING.currency}
+				p Your order #{success.order.id} is completed.
+
+				p Go to you account page
+			else 
+				h1 Error

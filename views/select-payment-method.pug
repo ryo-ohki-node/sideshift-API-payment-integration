@@ -5,7 +5,7 @@ html
 
 		meta( name="robots" content="noindex")
 		meta(name="viewport" content="width=device-width, initial-scale=1.0")
-		link(rel='stylesheet' href='main.css')
+		link(rel='stylesheet' href='/main.css')
 
 	body 
 		if(coinsListDeposit)
@@ -23,10 +23,8 @@ html
 					input(type="string" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="124.00")
 					br
 					br
-
-
 					h3 Pay with crypto
-				
+			
 					- var networks = []
 					- coinsListDeposit.forEach(coin => {
 						- var network = coin[0].split('-')[1]
@@ -50,7 +48,6 @@ html
 					select(name="pay_with")
 						each coin in coinsListDeposit
 							option(value=coin) #{coin[0]}
-							//- option(value=coin) #{coin[0].split('-')[0]}
 
 					br
 					br

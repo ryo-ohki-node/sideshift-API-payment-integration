@@ -39,21 +39,21 @@ const rateLimiter = rateLimit({
 });
 
 const paymentLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // limit each IP to 10 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 10, 
     message: 'Too many payment requests, please try again later'
 });
 
 
 // Demo function to Reset Crypto payment
-function resetCryptoPayment(invoiceId, shiftId){
+function resetCryptoPayment(invoiceId, shiftId, cryptoPaymentStatus){
     if (shopOrderObj[invoiceId]) {
-		shopOrderObj[invoiceId].paymentOtpion = "";
-		shopOrderObj[invoiceId].paymentStatus = "canceled";
-		shopOrderObj[invoiceId].total_crypto = "";
+		shopOrderObj[invoiceId].cryptoPaymentOption = "";
+		shopOrderObj[invoiceId].cryptoPaymentStatus = cryptoPaymentStatus;
+		shopOrderObj[invoiceId].cryptoTotal = "";
 		shopOrderObj[invoiceId].payWith = "";
 		shopOrderObj[invoiceId].isMemo = "";
-		shopOrderObj[invoiceId].failedPayment.push({type: "crypto", id: shiftId});
+		shopOrderObj[invoiceId].cryptoFailedPayment.push({type: "crypto", id: shiftId});
 		shopOrderObj[invoiceId].status = "waiting";
 	}
 }
@@ -61,7 +61,8 @@ function resetCryptoPayment(invoiceId, shiftId){
 // Demo function to Confirm Crypto payment
 function confirmCryptoPayment(invoiceId, shiftId){
 	if (shopOrderObj[invoiceId]) {
-		shopOrderObj[invoiceId].paymentID = shiftId;
+		shopOrderObj[invoiceId].paymentId = shiftId;
+		shopOrderObj[invoiceId].cryptoPaymentStatus = "settled";
 		shopOrderObj[invoiceId].status = "confirmed";
 	}
 }
@@ -107,23 +108,24 @@ const WALLETS = {
 };
 
 const SIDESHIFT_CONFIG = {
+    path: "../Sideshift_API_module/sideshiftAPI.js", // Path to module file
 	secret: process.env.SIDESHIFT_SECRET, // "Your_shideshift_secret";
-	id: process.env.SIDESHIFT_ID, //"Your_shideshift_ID"; 
-	commissionRate: "0.5",
-	verbose: true
+	id: process.env.SIDESHIFT_ID, // "Your_shideshift_ID"; 
+	commissionRate: "0.5", // Optional - commision rate setting from 0 to 2
+	verbose: true // verbose mode true/false
 }
 
 
 // Use sideshift verbose setting
-const verbose_mode = SIDESHIFT_CONFIG.verbose;
+const verbose = SIDESHIFT_CONFIG.verbose;
 
 // Load the crypto payment processor
-const cryptoPaymentProcessor = require('./ShiftProcessor.js')
-const shiftProcessor = new cryptoPaymentProcessor({WALLETS, MAIN_COIN, SECONDARY_COIN, SIDESHIFT_CONFIG, SHOP_SETTING});
+const ShiftProcessor = require('./ShiftProcessor.js')
+const shiftProcessor = new ShiftProcessor({WALLETS, MAIN_COIN, SECONDARY_COIN, SIDESHIFT_CONFIG, SHOP_SETTING});
 
 // Load the payment poller system
 const PaymentPoller = require('./CryptoPaymentPoller.js');
-const cryptoPoller = new PaymentPoller({shiftProcessor, intervalTimeout: 120000, resetCryptoPayment, confirmCryptoPayment}); // import sideshiftAPI and set interval delay in ms
+const cryptoPoller = new PaymentPoller({shiftProcessor, intervalTimeout: 30000, resetCryptoPayment, confirmCryptoPayment}); // import sideshiftAPI and set interval delay in ms
 
 // Set basic variables
 let availableCoins = null;
@@ -139,7 +141,6 @@ async function checkOrderStatus(shift, invoiceId, destWallet, amount) {
     return true;
   } catch (error) {
     console.error('Payment creation failed:', error);
-    // throw error;
   }
 }
 
@@ -179,17 +180,17 @@ app.post("/create-quote", paymentLimiter, async function(req,res){
 		shopOrderObj[orderId] = {};
 		shopOrderObj[orderId].id = orderId;
 		shopOrderObj[orderId].total = total;
-		shopOrderObj[orderId].paymentOtpion = "crypto";
-		shopOrderObj[orderId].paymentStatus = "waiting";
-		shopOrderObj[orderId].failedPayment = [];
-		shopOrderObj[orderId].total_crypto = amount;
+		shopOrderObj[orderId].status = "created";
+		shopOrderObj[orderId].cryptoPaymentOption = "crypto";
+		shopOrderObj[orderId].cryptoPaymentStatus = "waiting";
+		shopOrderObj[orderId].cryptoFailedPayment = [];
+		shopOrderObj[orderId].cryptoTotal = amount;
 		shopOrderObj[orderId].payWith = payWithCoin;
 		shopOrderObj[orderId].isMemo = String(payWith[1]);
-		shopOrderObj[orderId].status = "created";
 
 		res.render('crypto', { ratio: getPairData, invoice: shopOrderObj[orderId], SHOP_SETTING })
     } catch (err) {
-        if (verbose_mode) console.error("Error - crypto-select:", err);
+        if (verbose) console.error("Error - crypto-select:", err);
         res.status(500).send("Internal Server Error");
     }
 });
@@ -222,44 +223,90 @@ app.post("/create-payment", paymentLimiter, async function(req, res) {
 
         res.redirect(`/payment-status/${shift.id}/${id}`);
     } catch (err) {
-        if (verbose_mode) console.error("Error in create-payment:", err);
+        if (verbose) console.error("Error in create-payment:", err);
         res.status(500).send("Internal Server Error");
     }
 });
 
 
+
+// Global tracking object (for demo use)
+const redirectTracking = new Map();
+
+function checkInfiniteLoop(shiftId, invoiceId) {
+    const key = `${shiftId}_${invoiceId}`;
+    let tracking = redirectTracking.get(key) || { count: 0, lastRedirect: Date.now() };
+
+    // Reset counter after 2 minutes of inactivity
+    if (Date.now() - tracking.lastRedirect > 120000) {
+        tracking.count = 0;
+    }
+
+    tracking.count++;
+    tracking.lastRedirect = Date.now();
+    redirectTracking.set(key, tracking);
+
+    return tracking;
+}
+
+// need to clean mapping to avoid it going to infinity
+
 const handleCryptoShift = async (req, res, next) => {
     try {
+        // Your invoice tracking and costumer data validation here
         const invoiceId = shiftProcessor.sanitizeStringInput(String(req.params.id_invoice));
         if (!invoiceId) throw new Error("Missing invoice ID");
         if (!shopOrderObj[invoiceId]) throw new Error("Invalid invoice ID");
 
+        // Shift ID
         const shiftId = shiftProcessor.sanitizeStringInput(String(req.params.id_shift));
         if (!shiftId) throw new Error("Missing shift ID");
 
-        const shiftData = cryptoPoller.getPollingShiftData(shiftId);
+        // Prevent infinite loops
+        const tracking = checkInfiniteLoop(shiftId, invoiceId);
+        if (tracking.count > 50) {
+            console.error(`Redirect loop detected for shift ${shiftId}, invoice ${invoiceId}`);
+            return res.status(400).send("Something went wrong, too many refresh - please try again later");
+        }
+
+        // Process the data
         let shift;
+        let shiftData = cryptoPoller.getPollingShiftData(shiftId);
         
         if (shiftData) {
             // Use existing polling data
             shift = { ...shiftData.shift };
-            if (this.verbose) console.log(`Using cached polling data for ${shiftId}`);
+            if (verbose) console.log(`Using cached polling data for ${shiftId}`);
         } else {
-            // Fallback to API call if not in polling system
-            shift = await shiftProcessor.sideshift.getShift(shiftId);
-            if (this.verbose) console.log(`Fetched fresh data for ${shiftId} from API`);
+            try {
+                // Try to get fresh data from API first
+                shift = await shiftProcessor.sideshift.getShift(shiftId);
+                if (verbose) console.log(`Fetched fresh data for ${shiftId} from API`);
+            } catch (apiError) {
+                if (verbose) console.log(`API fetch failed for ${shiftId}, trying failed data...`);
+                
+                // Fallback to failed data if available
+                const failedData = cryptoPoller.getFailedShiftData(shiftId);
+                if (failedData) {
+                    shift = { ...failedData.shift };
+                    if (verbose) console.log(`Using failed data as fallback for ${shiftId}`);
+                } else {
+                    // If no failed data, re-throw the API error
+                    throw new Error(`Failed to fetch shift data: ${apiError.message}`);
+                }
+            }
         }
             
         req.shift = shift;
         req.invoice = shopOrderObj[invoiceId];
         next();
     } catch (err) {
-        if (verbose_mode) console.error("Error - handleCryptoShift:", err);
+        if (verbose) console.error("Error - handleCryptoShift:", err);
 
         if (err.message.includes('Missing')) {
-            res.status(400).send("Bad Request: " + err.message);
+            return res.status(400).send("Bad Request: " + err.message);
         } else {
-            res.status(500).send("Error: " + err.message);
+            return res.status(500).send("Error: " + err.message);
         }
     }
 };
@@ -269,6 +316,10 @@ app.get("/payment-status/:id_shift/:id_invoice", rateLimiter, handleCryptoShift,
     if (!shift || !invoice) {
         return res.status(400).send("Invalid payment data");
     }
+    
+    console.log(req.invoice.cryptoPaymentStatus)
+    
+    if(req.invoice.cryptoPaymentStatus === "Error_MaxRetryExceeded") return res.redirect(`/cancel/${shift.id}/${invoice.id}`);
 
     switch(shift.status) {
         case SHIFT_PAYMENT_STATUS.settled:
@@ -283,55 +334,63 @@ app.get("/payment-status/:id_shift/:id_invoice", rateLimiter, handleCryptoShift,
             });
     }
 });
+
 app.get("/success/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (req, res) => {
     try {
         if (req.shift.status !== SHIFT_PAYMENT_STATUS.settled) {
-            if(verbose_mode) console.log("Shift not settled yet", req.shift.id, req.invoice.id);
-            res.redirect("/payment-status/"+req.shift.id+"/"+req.invoice.id);
+            if (verbose) console.log("Shift not settled yet", req.shift.id, req.invoice.id);
+            res.redirect("/payment-status/" + req.shift.id + "/" + req.invoice.id);
         } else {
             const successData = {
                 shift: req.shift,
-                order: shopOrderObj[req.invoice.id]
+                order: req.invoice
             };
-            res.render('cencel-success')({success: successData, SHOP_SETTING});
+            res.render('cancel-success', { success: successData, SHOP_SETTING });
         }
 
     } catch (err) {
-        if (verbose_mode) console.error("Error in success route:", err);
+        if (verbose) console.error("Error in success route:", err);
         res.status(500).send("Error: " + err.message);
     }
 });
 
 app.get("/cancel/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (req, res) => {
     try {
-		if (req.shift.status !== SHIFT_PAYMENT_STATUS.expired) {
-            if(verbose_mode) console.log("Shift not expired yet", req.shift.id, req.invoice.id);
-            res.redirect("/payment-status/"+req.shift.id+"/"+req.invoice.id);
-        } else {
-    		res.status(400).send(`Canceled payment ${req.shift.id}, your order ${req.invoice.id} is not confirmed, try again`);
+        const cancelData = {
+            shift: req.shift,
+            order: req.invoice
+        };
+
+        if((req.invoice.cryptoPaymentStatus === "Error_MaxRetryExceeded" || "Canceled_by_User") || req.shift.status === SHIFT_PAYMENT_STATUS.expired){
+            return res.render('cancel-success', {cancel: cancelData, SHOP_SETTING});
         }
+        
+        if (req.shift.status !== SHIFT_PAYMENT_STATUS.expired) {
+            if(verbose) console.log("Shift not expired yet", req.shift.id, req.invoice.id);
+            return res.redirect("/payment-status/"+req.shift.id+"/"+req.invoice.id);
+        } 
 
     } catch (err) {
-        if (verbose_mode) console.error("Error in cancel route:", err);
+        if (verbose) console.error("Error in cancel route:", err);
         res.status(500).send("Error: " + err.message);
     }
-
 });
 
+app.get("/cancel-shift/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (req, res) => {
+    try {
+        if (req.shift.status === SHIFT_PAYMENT_STATUS.waiting) {
+            resetCryptoPayment(req.invoice.id, req.shift.id, "Canceled_by_User");
+            await cryptoPoller.stopPollingForShift(req.shift.id);
+            res.redirect(`/cancel/${req.shift.id}/${req.invoice.id}`);
+        } else{
+            res.redirect("/payment-status/"+req.shift.id+"/"+req.invoice.id)
+        }
+    } catch (err) {
+        if (verbose) console.error("Error in cancel-shift route:", err);
+        res.status(500).send("Error: " + err.message);
+    }
+});
 
-// app.post("/cancel-shift/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (req, res) => {
-//     try {
-//         if (req.shift.status !== SHIFT_PAYMENT_STATUS.settled && req.shift.status !== SHIFT_PAYMENT_STATUS.expired) {
-//             await cryptoPoller.stopPollingForShift(req.shift.id);
-//             res.redirect(`/cancel/${shift.id}/${invoice.id}`);
-//         } else{
-//             res.redirect("/payment-status/"+req.shift.id+"/"+req.invoice.id)
-//         }
-//     } catch (err) {
-//         if (verbose_mode) console.error("Error in cancel-shift route:", err);
-//         res.status(500).send("Error: " + err.message);
-//     }
-// });
 
 
 function isCoinValid(coin){
@@ -353,9 +412,11 @@ shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
         process.exit(1);
     }
 
+
     https.createServer(options, app).listen(PORT, () => {
         console.log(`HTTPS Server running at https://localhost:${PORT}/`);
     });
+    
     
     setInterval(async () => {
         const result = await shiftProcessor.updateCoinsList(ICON_PATH);

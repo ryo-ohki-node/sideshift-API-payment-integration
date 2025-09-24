@@ -10,10 +10,7 @@ html
 
 		meta( name="robots" content="noindex")
 		meta(name="viewport" content="width=device-width, initial-scale=1.0")
-		if(shift)
-			link(rel='stylesheet' href='../../main.css')
-		else 
-			link(rel='stylesheet' href='main.css')
+		link(rel='stylesheet' href='/main.css')
 
 	body 
 		div 
@@ -28,7 +25,7 @@ html
 					if(ratio.error.message)
 						p=ratio.error.message
 				else
-					-totalCrypto = (invoice.total_crypto / Number(ratio.rate)).toFixed(8)
+					-totalCrypto = (invoice.cryptoTotal / Number(ratio.rate)).toFixed(8)
 					-invoiceTotal = Number(invoice.total).toLocaleString(SHOP_SETTING.locale,{style:'currency', currency: SHOP_SETTING.currency})
 
 					form(method="post" action="/create-payment").form-checkout
@@ -109,7 +106,6 @@ html
 									b #{shift.status}
 
 					br
-					br
 
 					if(shift.status != "expired")
 						img(src="/icons/"+shift.depositCoin+"-"+shift.depositNetwork+".svg" width="100px" height="100px")
@@ -131,19 +127,14 @@ html
 							//- REDIRECT TO SUCCESS PAGE
 							script.
 								const shiftData = !{JSON.stringify(shift)};
-								setTimeout(function() {
-									window.location.href = "/success/"+shiftData.id+"/#{invoice.id}";
-								}, 2000);
+								window.location.href = "/success/"+shiftData.id+"/#{invoice.id}";
 						
 						else if(shift.status == "expired")
 							h2.expired Payment address expired !
 							//- REDIRECT TO CANCEL PAGE
 							script.
 								const shiftData = !{JSON.stringify(shift)};
-								setTimeout(function() {
-									window.location.href = "/cancel/"+shiftData.id+"/#{invoice.id}";
-								}, 2000);
-						
+								window.location.href = "/cancel/"+shiftData.id+"/#{invoice.id}";
 						else
 							h2 Invalid status
 							
@@ -166,6 +157,9 @@ html
 										th Wallet Memo
 										td #{shift.depositMemo}
 
+
+					a(href="/cancel-shift/"+shift.id+"/"+invoice.id)
+						button.paybutton Cancel Payment
 
 					br
 					br
@@ -191,4 +185,4 @@ if(shift)
 			if(status !== "expired" && status !== "settled") location.reload();
 		}
 		
-		setTimeout(autoRefresh, 30000);
+		setTimeout(autoRefresh, 20000);
